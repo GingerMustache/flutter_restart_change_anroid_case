@@ -10,7 +10,6 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
 
 class RestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var context: Context
@@ -35,8 +34,9 @@ class RestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
      * If the method call is 'restartApp', it restarts the app and sends a successful result.
      * For any other method call, it sends a 'not implemented' result.
      */
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-        if (call.method == "restart") {
+    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result){
+
+    if (call.method == "restart") {
             restartApp()
             result.success("ok")
         } else {
