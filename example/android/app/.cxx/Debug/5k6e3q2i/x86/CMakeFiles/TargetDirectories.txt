@@ -1,0 +1,2 @@
+/Users/athur/flutter_project/flutter_restart_change_anroid_case/example/android/app/.cxx/Debug/5k6e3q2i/x86/CMakeFiles/rebuild_cache.dir
+/Users/athur/flutter_project/flutter_restart_change_anroid_case/example/android/app/.cxx/Debug/5k6e3q2i/x86/CMakeFiles/edit_cache.dir
