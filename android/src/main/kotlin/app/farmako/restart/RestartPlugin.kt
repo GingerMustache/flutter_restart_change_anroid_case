@@ -1,12 +1,9 @@
 package app.farmako.restart
 
-import android.util.Log
 import android.app.Activity
-import android.app.Application
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.embedding.engine.FlutterJNI
-import io.flutter.embedding.engine.dart.DartExecutor
-import io.flutter.embedding.engine.loader.FlutterLoader
+import android.content.Context
+import android.content.Intent
+import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -14,9 +11,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 
 class RestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var context: Context
