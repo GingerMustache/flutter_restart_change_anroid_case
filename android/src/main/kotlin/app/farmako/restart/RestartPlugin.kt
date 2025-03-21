@@ -16,104 +16,72 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 class RestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
-    private val lock = Any()
-    private var channel: MethodChannel? = null
+    private lateinit var context: Context
+    private lateinit var channel: MethodChannel
     private var activity: Activity? = null
 
-    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        application = flutterPluginBinding.applicationContext as Application
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "in.farmako/restart")
-        channel?.setMethodCallHandler(this)
+    /**
+     * Called when the plugin is attached to the Flutter engine.
+     *
+     * It initializes the `context` with the application context and
+     * sets this plugin instance as the handler for method calls from Flutter.
+     */
+    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        context = flutterPluginBinding.applicationContext
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "restart")
+        channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(call: MethodCall, result: Result) {
+    /**
+     * Handles method calls from the Flutter code.
+     *
+     * If the method call is 'restartApp', it restarts the app and sends a successful result.
+     * For any other method call, it sends a 'not implemented' result.
+     */
+    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         if (call.method == "restart") {
-            val args = call.argument<List<String>?>("args") ?: emptyList()
-            restart(args)
-            result.success(null)
+            restartApp()
+            result.success("ok")
         } else {
             result.notImplemented()
         }
     }
 
-    private fun restart(args: List<String>) = synchronized(lock) {
-        // Save args for the newly created FlutterEngine instance.
-        dartEntrypointArgs = args
-
-        // [FlutterActivity.recreate] is sufficient to restart the underlying Flutter engine.
-        // The following logic exists to ensure that Shorebird loads the latest downloaded patch
-        // after restart, without requiring a full termination & re-launch of the process.
-        // References:
-        // * https://github.com/shorebirdtech/engine/blob/d1af83d/shell/platform/android/flutter_main.cc#L71
-        // * https://github.com/shorebirdtech/engine/blob/d1af83d/shell/platform/android/flutter_main.cc#L138
-        // * https://github.com/shorebirdtech/engine/blob/d1af83d/shell/common/shorebird/shorebird.cc#L83
-        // * https://github.com/shorebirdtech/engine/blob/d1af83d/shell/common/shorebird/shorebird.cc#L170
-
-        val flutterJNI = FlutterJNI.Factory().provideFlutterJNI()
-
-        runCatching {
-            val loadLibraryCalledField = flutterJNI.javaClass.getDeclaredField("loadLibraryCalled")
-            loadLibraryCalledField.isAccessible = true
-            loadLibraryCalledField.setBoolean(flutterJNI, false)
-        }.onFailure {
-            Log.e(TAG, "Unable to reset loadLibraryCalled.", it)
-        }
-        runCatching {
-            val initCalledField = flutterJNI.javaClass.getDeclaredField("initCalled")
-            initCalledField.isAccessible = true
-            initCalledField.setBoolean(flutterJNI, false)
-        }.onFailure {
-            Log.e(TAG, "Unable to reset initCalled.", it)
-        }
-        runCatching {
-            val prefetchDefaultFontManagerCalledField = flutterJNI.javaClass.getDeclaredField("prefetchDefaultFontManagerCalled")
-            prefetchDefaultFontManagerCalledField.isAccessible = true
-            prefetchDefaultFontManagerCalledField.setBoolean(flutterJNI, false)
-        }.onFailure {
-            Log.e(TAG, "Unable to reset prefetchDefaultFontManagerCalled.", it)
-        }
-
-        runCatching {
-            val flutterLoader = FlutterLoader(FlutterJNI.Factory().provideFlutterJNI())
-            flutterLoader.startInitialization(activity!!.applicationContext)
-            flutterLoader.ensureInitializationComplete(activity!!.applicationContext, null)
-        }.onFailure {
-            Log.e(TAG, "Unable to initialize the Flutter runtime.", it)
-        }
-        activity?.recreate()
+    /**
+     * Called when the plugin is detached from the Flutter engine.
+     *
+     * It removes the handler for method calls from Flutter.
+     */
+    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        channel.setMethodCallHandler(null)
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel?.setMethodCallHandler(null)
+    /**
+     * Restarts the application.
+     */
+    private fun restartApp() {
+        activity?.let { currentActivity ->
+            val intent =
+                currentActivity.packageManager.getLaunchIntentForPackage(currentActivity.packageName)
+            intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            currentActivity.startActivity(intent)
+            currentActivity.finishAffinity()
+        }
     }
 
-    override fun onAttachedToActivity(binding: ActivityPluginBinding) = synchronized(lock) {
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
     }
 
-    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) = synchronized(lock) {
+    override fun onDetachedFromActivityForConfigChanges() {
+        activity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
     }
 
-    override fun onDetachedFromActivityForConfigChanges() {}
-
-    override fun onDetachedFromActivity() {}
-
-    companion object {
-        private const val TAG = "RestartPlugin"
-
-        @JvmStatic
-        var application: Application? = null
-        @JvmStatic
-        var dartEntrypointArgs = emptyList<String>()
-
-        fun provideFlutterEngine(): FlutterEngine? = application?.let {
-            FlutterEngine(it).apply {
-                dartExecutor.executeDartEntrypoint(
-                    DartExecutor.DartEntrypoint.createDefault(),
-                    dartEntrypointArgs
-                )
-            }
-        }
+    override fun onDetachedFromActivity() {
+        activity = null
     }
 }
