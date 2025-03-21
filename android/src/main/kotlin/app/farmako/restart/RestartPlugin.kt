@@ -14,6 +14,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 
 class RestartPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var context: Context
